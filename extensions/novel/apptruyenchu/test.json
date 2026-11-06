@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "Check source alive & search",
+      "url": "https://apptruyenchu.pro/truyen?keyword=kiem",
+      "expectedPattern": "group block"
+    },
+    {
+      "name": "Check detail metadata",
+      "url": "https://apptruyenchu.pro/truyen/de-nhat-kiem-than",
+      "expectedPattern": "Đệ Nhất Kiếm Thần"
+    },
+    {
+      "name": "Check chapter content",
+      "url": "https://apptruyenchu.pro/truyen/de-nhat-kiem-than/chuong-1",
+      "expectedPattern": "Diệp Huyên"
+    }
+  ]
+}

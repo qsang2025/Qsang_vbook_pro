@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "name": "App Truyện Chữ",
+    "author": "qsang2025",
+    "version": 1,
+    "source": "https://apptruyenchu.pro",
+    "regexp": "https?://apptruyenchu\\.pro/truyen/[^/]+$",
+    "description": "Đọc truyện chữ online tại App Truyện Chữ (tối ưu Next.js Server Action)",
+    "locale": "vi_VN",
+    "type": "novel",
+    "encrypt": false
+  },
+  "script": {
+    "home": "home.js",
+    "genre": "genre.js",
+    "search": "search.js",
+    "detail": "detail.js",
+    "toc": "toc.js",
+    "chap": "chap.js"
+  },
+  "config": {
+    "DOMAIN": {
+      "title": "Tên miền",
+      "default": "https://apptruyenchu.pro",
+      "values": [
+        "https://apptruyenchu.pro"
+      ],
+      "mode": "select"
+    }
+  }
+}
