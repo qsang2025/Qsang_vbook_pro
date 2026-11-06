@@ -1,0 +1,27 @@
+name: Validate Extensions & Catalog
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate Rhino ES6 & Manifest Schemas
+        run: node scripts/cli.js validate
+
+      - name: Verify Catalog Synchronization
+        run: |
+          node scripts/cli.js build-catalog
+          git diff --exit-code plugin.json || (echo "Error: plugin.json is not up to date! Run 'node scripts/cli.js build-catalog' and commit." && exit 1)

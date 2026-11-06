@@ -1,0 +1,64 @@
+name: Scheduled Health Check & Source Monitoring
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Health Probes & Golden Fixtures
+        run: node scripts/cli.js health-check
+
+      - name: Commit and Push Updated STATUS.md
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add STATUS.md
+          if git diff --staged --quiet; then
+            echo "STATUS.md has not changed."
+          else
+            git commit -m "chore(status): update extension health status [skip ci]"
+            git push origin main
+          fi
+
+      - name: Open GitHub Issue on Source Failure
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f health-check-failures.json ]; then
+            FAILED_COUNT=$(node -e "const f = require('./health-check-failures.json'); console.log(f.failedCount || 0);")
+            if [ "$FAILED_COUNT" -gt 0 ]; then
+              echo "Found $FAILED_COUNT broken source(s). Opening issue..."
+              node -e "
+                const fs = require('fs');
+                const data = JSON.parse(fs.readFileSync('./health-check-failures.json', 'utf8'));
+                let body = '### ⚠️ Cảnh báo: Phát hiện nguồn truyện bị lỗi trong lượt quét định kỳ\n\n';
+                body += '| Nguồn | Loại | URL | Trạng thái | Chi tiết |\n';
+                body += '| :--- | :--- | :--- | :---: | :--- |\n';
+                for (const item of data.failures) {
+                  body += '| **' + item.name + '** | \`' + item.type + '\` | ' + item.source + ' | 🔴 ' + item.status + ' | ' + item.detail + ' |\n';
+                }
+                body += '\n\n*Hệ thống phát hiện tự động bởi CI Health-Check.*';
+                fs.writeFileSync('./issue-body.md', body, 'utf8');
+              "
+              gh issue create --title "[Source Alert] $FAILED_COUNT nguồn truyện bị lỗi / thay đổi giao diện" --body-file ./issue-body.md --label "bug" || true
+            else
+              echo "All sources are healthy. No issue needed."
+            fi
+          fi

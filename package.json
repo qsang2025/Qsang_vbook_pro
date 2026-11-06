@@ -1,0 +1,23 @@
+{
+  "name": "qsang-vbook-pro",
+  "version": "1.0.0",
+  "description": "Professional vBook Extensions Framework with automated health-checks and zero external dependencies",
+  "private": true,
+  "scripts": {
+    "validate": "node scripts/cli.js validate",
+    "build": "node scripts/cli.js build",
+    "build-catalog": "node scripts/cli.js build-catalog",
+    "health-check": "node scripts/cli.js health-check",
+    "connect": "node scripts/cli.js connect",
+    "test": "node scripts/cli.js test"
+  },
+  "keywords": [
+    "vbook",
+    "vbook-extension",
+    "novel",
+    "comic",
+    "rhino-es6"
+  ],
+  "author": "qsang2025",
+  "license": "MIT"
+}
