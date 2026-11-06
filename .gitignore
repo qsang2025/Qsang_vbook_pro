@@ -1,6 +1,7 @@
-# Build artifacts
+# Build artifacts (allow extension release zip so vBook can download via raw GitHub URL)
 *.zip
-plugin.zip
+!extensions/**/plugin.zip
+
 
 # Runtime temporary logs and summaries
 health-check-failures.json
