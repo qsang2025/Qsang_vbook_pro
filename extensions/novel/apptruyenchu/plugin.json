@@ -2,7 +2,7 @@
   "metadata": {
     "name": "App Truyện Chữ",
     "author": "qsang2025",
-    "version": 1,
+    "version": 2,
     "source": "https://apptruyenchu.pro",
     "regexp": "https?://apptruyenchu\\.pro/truyen/[^/]+$",
     "description": "Đọc truyện chữ online tại App Truyện Chữ (tối ưu Next.js Server Action)",

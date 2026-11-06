@@ -8,7 +8,7 @@
       "name": "App Truyện Chữ",
       "author": "qsang2025",
       "path": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/novel/apptruyenchu/plugin.zip",
-      "version": 1,
+      "version": 2,
       "source": "https://apptruyenchu.pro",
       "icon": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/novel/apptruyenchu/icon.png",
       "description": "Đọc truyện chữ online tại App Truyện Chữ (tối ưu Next.js Server Action)",

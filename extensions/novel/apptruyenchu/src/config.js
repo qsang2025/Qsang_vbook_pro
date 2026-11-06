@@ -5,12 +5,16 @@ try {
     }
 } catch (e) {}
 
-load("config-helpers.js");
-load("fetch-helpers.js");
-load("cleanHtml.js");
-
 var CHAPTERS_ACTION_ID = "40846d9ab28025db6a72550e98f102a4cdecf4a9a7";
 
 function normalizeUrl(url) {
-    return ConfigHelpers.normalizeUrl(url, BASE_URL);
+    if (!url) return "";
+    url = url.trim();
+    if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
+        var match = url.match(/^https?:\/\/[^\/]+/i);
+        if (match) return BASE_URL + url.slice(match[0].length);
+        return url;
+    }
+    if (url.charAt(0) === "/") return BASE_URL + url;
+    return BASE_URL + "/" + url;
 }

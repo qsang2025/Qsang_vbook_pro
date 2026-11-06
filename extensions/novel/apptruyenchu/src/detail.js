@@ -1,4 +1,6 @@
 load("config.js");
+load("config-helpers.js");
+load("cleanHtml.js");
 
 function execute(url) {
     url = normalizeUrl(url);

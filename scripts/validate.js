@@ -214,6 +214,18 @@ function validateExtension(extDir) {
     const targetPath = path.join(srcDir, lib);
     if (!fs.existsSync(targetPath)) {
       issues.push(`Script in ${relDir} calls load('${lib}'), but '${lib}' does not exist in ${relDir}/src/. Run 'node scripts/build.js' to bundle required libraries.`);
+    } else {
+      // Rule 1: A loaded library cannot itself call load(...) (load is not recursive)
+      const libCode = fs.readFileSync(targetPath, "utf8");
+      const subLoadRegex = /load\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+      const subMatches = [];
+      let sm;
+      while ((sm = subLoadRegex.exec(libCode)) !== null) {
+        subMatches.push(sm[1]);
+      }
+      if (subMatches.length > 0) {
+        issues.push(`[Rule 1 Violation] ${relDir}/src/${lib} calls load('${subMatches.join("', '")}'). vBook constraint: A loaded library cannot itself call load().`);
+      }
     }
   }
 
