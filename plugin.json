@@ -14,6 +14,17 @@
       "description": "Đọc truyện chữ online tại App Truyện Chữ (v3: Streaming RSC, JSON-LD Schema & Next-Action)",
       "type": "novel",
       "locale": "vi_VN"
+    },
+    {
+      "name": "HHKUNGFU",
+      "author": "Qsang",
+      "path": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/video/hhkungfu/plugin.zip",
+      "version": 3,
+      "source": "https://hhkungfu.ee",
+      "icon": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/video/hhkungfu/icon.png",
+      "description": "HHKUNGFU - Phim Hoạt Hình Kungfu Trung Quốc Vietsub / Thuyết Minh (Thương Nguyên Đồ, Đấu La Đại Lục, Tru Tiên...).",
+      "type": "video",
+      "locale": "vi_VN"
     }
   ]
 }

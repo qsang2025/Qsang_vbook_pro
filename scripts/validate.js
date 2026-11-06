@@ -176,8 +176,46 @@ function validateExtension(extDir) {
     issues.push(`No JavaScript files found in ${relDir}/src/`);
   }
 
+  function findLoadCalls(code) {
+    const found = [];
+    let i = 0;
+    const n = code.length;
+    while (i < n) {
+      const c = code.charAt(i);
+      if (c === '"' || c === "'" || c === "`") {
+        const q = c;
+        i++;
+        while (i < n && code.charAt(i) !== q) {
+          if (code.charAt(i) === "\\") i++;
+          i++;
+        }
+        i++;
+        continue;
+      }
+      if (c === "/" && code.charAt(i + 1) === "/") {
+        while (i < n && code.charAt(i) !== "\n") i++;
+        continue;
+      }
+      if (c === "/" && code.charAt(i + 1) === "*") {
+        i += 2;
+        while (i + 1 < n && !(code.charAt(i) === "*" && code.charAt(i + 1) === "/")) i++;
+        i += 2;
+        continue;
+      }
+      if (code.slice(i, i + 4) === "load" && !/[a-zA-Z0-9_$]/.test(code.charAt(i - 1) || "")) {
+        const m = /^load\s*\(\s*(['"])([^'"]+)\1/.exec(code.slice(i));
+        if (m) {
+          found.push(m[2]);
+          i += m[0].length;
+          continue;
+        }
+      }
+      i++;
+    }
+    return found;
+  }
+
   const loadedFiles = new Set();
-  const loadRegex = /load\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
   for (const file of srcFiles) {
     const filePath = path.join(srcDir, file);
@@ -190,16 +228,15 @@ function validateExtension(extDir) {
     }
 
     // Check execute function existence for runnable scripts
-    if (file !== "config.js" && file !== "cleanHtml.js" && file !== "config-helpers.js" && file !== "fetch-helpers.js" && file !== "gbk.js") {
+    if (file !== "config.js" && file !== "cleanHtml.js" && file !== "config-helpers.js" && file !== "fetch-helpers.js" && file !== "gbk.js" && file !== "helper.js") {
       if (!/\bfunction\s+execute\s*\(/.test(code)) {
         issues.push(`${relDir}/src/${file}: Missing mandatory 'function execute(...)'`);
       }
     }
 
-    // Track loaded libraries
-    let match;
-    while ((match = loadRegex.exec(code)) !== null) {
-      const targetLib = match[1];
+    // Track loaded libraries (skipping comments/strings)
+    const calls = findLoadCalls(code);
+    for (const targetLib of calls) {
       loadedFiles.add(targetLib);
 
       // Rule: load() must only load top-level file
@@ -217,12 +254,7 @@ function validateExtension(extDir) {
     } else {
       // Rule 1: A loaded library cannot itself call load(...) (load is not recursive)
       const libCode = fs.readFileSync(targetPath, "utf8");
-      const subLoadRegex = /load\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-      const subMatches = [];
-      let sm;
-      while ((sm = subLoadRegex.exec(libCode)) !== null) {
-        subMatches.push(sm[1]);
-      }
+      const subMatches = findLoadCalls(libCode);
       if (subMatches.length > 0) {
         issues.push(`[Rule 1 Violation] ${relDir}/src/${lib} calls load('${subMatches.join("', '")}'). vBook constraint: A loaded library cannot itself call load().`);
       }
