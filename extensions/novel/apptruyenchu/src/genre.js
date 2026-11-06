@@ -1,5 +1,3 @@
-load("config.js");
-
 function execute() {
     return Response.success([
         { title: "Tiên hiệp", input: "/truyen?cate=tien-hiep", script: "gen.js" },

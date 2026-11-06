@@ -11,33 +11,43 @@ function execute(query, page) {
         targetUrl = BASE_URL + "/truyen?keyword=" + encodeURIComponent(query || "") + "&page=" + page;
     }
 
-    var response = fetch(targetUrl);
-    if (!response.ok) {
-        return Response.error("Không thể kết nối máy chủ App Truyện Chữ: HTTP " + response.status);
+    var response = null;
+    try {
+        response = fetch(targetUrl);
+    } catch (e) {
+        return Response.error("Lỗi kết nối máy chủ: " + e);
+    }
+
+    if (!response || !response.ok) {
+        var status = response ? response.status : 0;
+        return Response.error("Không thể kết nối máy chủ App Truyện Chữ (HTTP " + status + ")");
     }
 
     var doc = response.html();
-    var cards = doc.select("a.group.block[href^='/truyen/']");
+    var cards = doc.select("a[href^='/truyen/']");
     var items = [];
+    var seen = {};
 
     for (var i = 0; i < cards.size(); i++) {
         var a = cards.get(i);
         var href = a.attr("href");
-        if (!href || href === "/truyen") continue;
+        if (!href || href === "/truyen" || href.indexOf("/chuong-") !== -1) continue;
+
+        var fullLink = normalizeUrl(href);
+        if (seen[fullLink]) continue;
 
         var h3 = a.select("h3").first();
-        var title = h3 ? h3.text().trim() : "";
+        var title = h3 ? h3.text() : "";
         var img = a.select("img").first();
-        var cover = "";
+        if (!title && img) {
+            title = img.attr("alt") || "";
+        }
+        title = dedupeTitle(title);
+        if (!title) continue;
 
+        var cover = "";
         if (img) {
-            var rawSrc = img.attr("src") || img.attr("data-src") || "";
-            var urlMatch = rawSrc.match(/url=([^&]+)/);
-            if (urlMatch) {
-                cover = decodeURIComponent(urlMatch[1]);
-            } else if (rawSrc) {
-                cover = normalizeUrl(rawSrc);
-            }
+            cover = unwrapCover(img.attr("src") || img.attr("data-src") || "");
         }
 
         var pList = a.select("p");
@@ -48,9 +58,10 @@ function execute(query, page) {
             desc = desc ? (desc + " • " + extra) : extra;
         }
 
+        seen[fullLink] = true;
         items.push({
-            name: title || "Truyện",
-            link: normalizeUrl(href),
+            name: title,
+            link: fullLink,
             cover: cover,
             description: desc,
             host: BASE_URL
@@ -58,9 +69,11 @@ function execute(query, page) {
     }
 
     var nextPage = "";
-    if (items.length >= 18) {
-        var nextNum = parseInt(page, 10) + 1;
-        nextPage = nextNum.toString();
+    var curPageNum = parseInt(page, 10);
+    var nextTargetPage = curPageNum + 1;
+    var hasNextInDom = doc.select("a[href*='page=" + nextTargetPage + "']").size() > 0;
+    if (hasNextInDom || items.length >= 18) {
+        nextPage = String(nextTargetPage);
     }
 
     return Response.success(items, nextPage);

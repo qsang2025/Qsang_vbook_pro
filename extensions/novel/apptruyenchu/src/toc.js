@@ -2,9 +2,16 @@ load("config.js");
 
 function execute(url) {
     url = normalizeUrl(url);
-    var response = fetch(url);
-    if (!response.ok) {
-        return Response.error("Không thể tải danh sách chương: HTTP " + response.status);
+    var response = null;
+    try {
+        response = fetch(url);
+    } catch (e) {
+        return Response.error("Không thể kết nối đến truyện: " + e);
+    }
+
+    if (!response || !response.ok) {
+        var status = response ? response.status : 0;
+        return Response.error("Không thể tải danh sách chương (HTTP " + status + "): " + url);
     }
 
     var html = response.text();
@@ -16,37 +23,52 @@ function execute(url) {
     }
 
     if (bookId) {
-        var actionRes = fetch(url, {
-            method: "POST",
-            headers: {
-                "Next-Action": CHAPTERS_ACTION_ID,
-                "Content-Type": "application/json",
-                "Accept": "text/x-component"
-            },
-            body: JSON.stringify([bookId])
-        });
+        var actionRes = null;
+        try {
+            actionRes = fetch(url, {
+                method: "POST",
+                headers: {
+                    "Next-Action": CHAPTERS_ACTION_ID,
+                    "Content-Type": "application/json",
+                    "Accept": "text/x-component"
+                },
+                body: JSON.stringify([bookId])
+            });
+        } catch (err) {}
 
-        if (actionRes.ok) {
+        if (actionRes && actionRes.ok) {
             var actionText = actionRes.text();
-            var jsonMatch = actionText.match(/1:(\[[\s\S]*\])/);
-            if (jsonMatch) {
-                try {
-                    var chapters = JSON.parse(jsonMatch[1]);
-                    var list = [];
-                    var cleanBaseUrl = url.replace(/\/+$/, "");
+            var lines = actionText.split("\n");
+            for (var k = 0; k < lines.length; k++) {
+                if (lines[k].indexOf("1:[") === 0) {
+                    try {
+                        var chapters = JSON.parse(lines[k].substring(2));
+                        if (chapters && chapters.length > 0) {
+                            chapters.sort(function(a, b) {
+                                return (a.number || 0) - (b.number || 0);
+                            });
 
-                    for (var i = 0; i < chapters.length; i++) {
-                        var ch = chapters[i];
-                        list.push({
-                            name: ch.label,
-                            url: cleanBaseUrl + "/" + ch.slugId,
-                            host: BASE_URL
-                        });
-                    }
-                    if (list.length > 0) {
-                        return Response.success(list);
-                    }
-                } catch (e) {}
+                            var list = [];
+                            var cleanBaseUrl = url.replace(/\/+$/, "");
+
+                            for (var i = 0; i < chapters.length; i++) {
+                                var ch = chapters[i];
+                                if (!ch || !ch.slugId) continue;
+                                list.push({
+                                    name: ch.label || ("Chương " + (ch.number || (i + 1))),
+                                    url: cleanBaseUrl + "/" + ch.slugId,
+                                    host: BASE_URL,
+                                    lock: !!ch.isLock
+                                });
+                            }
+
+                            if (list.length > 0) {
+                                return Response.success(list);
+                            }
+                        }
+                    } catch (pe) {}
+                    break;
+                }
             }
         }
     }
@@ -63,9 +85,10 @@ function execute(url) {
         if (href && !seen[href]) {
             seen[href] = true;
             fallbackList.push({
-                name: a.text().trim() || ("Chương " + (fallbackList.length + 1)),
+                name: dedupeTitle(a.text()) || ("Chương " + (fallbackList.length + 1)),
                 url: normalizeUrl(href),
-                host: BASE_URL
+                host: BASE_URL,
+                lock: false
             });
         }
     }

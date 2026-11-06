@@ -45,66 +45,38 @@ function findExtensions(startDir) {
   return results.sort();
 }
 
-function probeUrl(targetUrl, timeoutMs = 10000) {
-  return new Promise(resolve => {
-    const startTime = Date.now();
-    try {
-      const u = new URL(targetUrl);
-      const lib = u.protocol === "https:" ? https : http;
-      const req = lib.get(u, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-        },
-        timeout: timeoutMs
-      }, res => {
-        let body = "";
-        res.setEncoding("utf8");
-        res.on("data", chunk => {
-          if (body.length < 50000) body += chunk; // capture sample
-        });
-        res.on("end", () => {
-          const latency = Date.now() - startTime;
-          resolve({
-            ok: res.statusCode >= 200 && res.statusCode < 400,
-            status: res.statusCode,
-            latency,
-            bodySample: body,
-            error: null
-          });
-        });
-      });
-
-      req.on("error", err => {
-        resolve({
-          ok: false,
-          status: 0,
-          latency: Date.now() - startTime,
-          bodySample: "",
-          error: err.message
-        });
-      });
-
-      req.on("timeout", () => {
-        req.destroy();
-        resolve({
-          ok: false,
-          status: 504,
-          latency: timeoutMs,
-          bodySample: "",
-          error: `Timeout after ${timeoutMs}ms`
-        });
-      });
-    } catch (e) {
-      resolve({
-        ok: false,
-        status: 0,
-        latency: 0,
-        bodySample: "",
-        error: e.message
-      });
-    }
-  });
+async function probeUrl(targetUrl, timeoutMs = 15000) {
+  const startTime = Date.now();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    const body = await res.text();
+    const latency = Date.now() - startTime;
+    return {
+      ok: res.ok,
+      status: res.status,
+      latency,
+      bodySample: body,
+      error: null
+    };
+  } catch (err) {
+    const isTimeout = err.name === "AbortError";
+    return {
+      ok: false,
+      status: isTimeout ? 504 : 0,
+      latency: Date.now() - startTime,
+      bodySample: "",
+      error: isTimeout ? `Timeout after ${timeoutMs}ms` : err.message
+    };
+  }
 }
 
 async function runHealthCheck() {
