@@ -1,0 +1,37 @@
+name: Báo cáo lỗi nguồn truyện
+description: Báo cáo một extension bị gãy, không tải được chương hoặc web đổi giao diện
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: ext-name
+    attributes:
+      label: Tên extension bị lỗi
+      placeholder: App Truyện Chữ
+    validations:
+      required: true
+  - type: dropdown
+    id: error-type
+    attributes:
+      label: Loại lỗi gặp phải
+      options:
+        - "Không tìm kiếm được truyện (Search lỗi)"
+        - "Không tải được thông tin chi tiết (Detail lỗi)"
+        - "Không tải được danh sách chương (TOC rỗng / thiếu chương)"
+        - "Không đọc được nội dung chương (Chap trắng / VIP)"
+        - "Lỗi không kết nối được (HTTP 403 / 502 / Cloudflare chặn)"
+        - "Khác"
+    validations:
+      required: true
+  - type: input
+    id: sample-url
+    attributes:
+      label: Link truyện hoặc chương bị lỗi
+      placeholder: https://...
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Mô tả chi tiết hoặc ảnh chụp màn hình
+      placeholder: "Mở truyện thì thấy báo lỗi: Không tìm thấy danh sách chương..."

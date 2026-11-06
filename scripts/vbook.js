@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * vBook Developer Server CLI — Connect, Test, Build, Install.
+ * vBook Developer Server CLI — Connect, Test, Build, Install, TestAll.
  * Operates against vBook local REST server on phone/emulator.
  * Zero external dependencies.
  *
@@ -29,6 +29,27 @@ function die(msg) {
 
 function repoRoot() {
   return path.resolve(__dirname, "..");
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function pad(s, len = 20) {
+  return String(s || "").padEnd(len, " ").slice(0, len);
+}
+
+function hostOf(s) {
+  try {
+    return new URL(s).host.replace(/^www\./, "");
+  } catch (e) {
+    return "";
+  }
+}
+
+function pickHost(item) {
+  if (!item) return "";
+  return hostOf(item.link || item.url || "") || hostOf(item.host || "");
 }
 
 function resolveExtDir(target) {
@@ -99,6 +120,37 @@ function request(method, urlStr, bodyObj) {
   });
 }
 
+function requestTimeout(method, urlStr, bodyObj, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const lib = u.protocol === "https:" ? https : http;
+    const body = bodyObj != null ? JSON.stringify(bodyObj) : null;
+    const headers = { "Accept": "application/json" };
+    if (body != null) {
+      headers["Content-Type"] = "application/json";
+      headers["Content-Length"] = Buffer.byteLength(body);
+    }
+    const req = lib.request({
+      hostname: u.hostname,
+      port: u.port || (u.protocol === "https:" ? 443 : 80),
+      path: u.pathname + u.search,
+      method: method,
+      headers: headers,
+    }, res => {
+      let data = "";
+      res.setEncoding("utf8");
+      res.on("data", c => { data += c; });
+      res.on("end", () => { resolve({ status: res.statusCode, text: data }); });
+    });
+    req.on("error", reject);
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error("Timeout after " + timeoutMs + "ms"));
+    });
+    if (body != null) req.write(body);
+    req.end();
+  });
+}
+
 function parseJson(text) {
   try { return JSON.parse(text); } catch (e) { return null; }
 }
@@ -160,7 +212,6 @@ async function resolveServer(explicit) {
 }
 
 function buildPayload(extDir, wantIcon) {
-  // First ensure libraries are synced
   buildExtension(extDir);
 
   const pluginPath = path.join(extDir, "plugin.json");
@@ -187,10 +238,63 @@ function buildPayload(extDir, wantIcon) {
   return payload;
 }
 
+async function runScript(server, extDir, script, vararg, timeoutMs) {
+  const p = buildPayload(extDir, false);
+  p.input = JSON.stringify({ script: script, vararg: vararg });
+  let res;
+  try {
+    res = await requestTimeout("POST", new URL("/extension/test", server).toString(), p, timeoutMs);
+  } catch (e) {
+    return { unreachable: true, err: e.message };
+  }
+  const j = parseJson(res.text);
+  if (!j) return { err: "bad response: " + res.text.slice(0, 120) };
+
+  let inner = j.data != null ? j.data : j.message;
+  let scriptCode = j.code;
+  if (inner && typeof inner === "object" && !Array.isArray(inner) && ("code" in inner) && ("data" in inner)) {
+    scriptCode = inner.code;
+    inner = inner.data;
+  }
+  const out = inner;
+  const r = { code: scriptCode, log: j.log };
+  if (typeof out === "string") {
+    r.text = out;
+    if (/Error|Exception|not defined|Cannot find/.test(out)) r.err = out.split("\n")[0];
+  } else if (Array.isArray(out)) {
+    r.count = out.length;
+    r.empty = out.length === 0;
+    const first = out[0] || {};
+    r.firstHost = pickHost(first);
+    r.firstLink = first.link || first.url || "";
+  } else if (out && typeof out === "object") {
+    r.count = 1;
+    r.firstHost = pickHost(out);
+    r.firstLink = out.link || out.url || "";
+  }
+  return r;
+}
+
+function classify(run, srcHost) {
+  if (!run) return { status: "NO_SCRIPT", note: "" };
+  if (run.unreachable) return { status: "UNREACHABLE", note: run.err };
+  if (run.err) return { status: "CRASH", note: run.err };
+  if (run.code === 1) return { status: "AUTH/MSG", note: (run.text || "").slice(0, 80) };
+  if (run.empty) return { status: "EMPTY", note: "code 0 but 0 items" };
+  if (run.count > 0 && run.firstHost) {
+    if (srcHost && run.firstHost !== srcHost) {
+      return { status: "MOVED", note: srcHost + " -> " + run.firstHost };
+    }
+    return { status: "WORK", note: run.count + " items @ " + run.firstHost };
+  }
+  if (run.count > 0) return { status: "WORK", note: run.count + " items" };
+  return { status: "UNKNOWN", note: "code=" + run.code };
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const noIcon = argv.includes("--no-icon");
-  const args = argv.filter(a => a !== "--no-icon");
+  let args = argv.filter(a => a !== "--no-icon");
 
   let explicitServer = null;
   const sIdx = args.indexOf("--server");
@@ -206,11 +310,11 @@ async function main() {
   if (!cmd || cmd === "help") {
     console.log(`vBook Developer CLI
 Commands:
-  connect                        Test connection to device
-  build <ext-dir> [out.zip]      Build zip with bundled lib/ dependencies
-  install <ext-dir> [--no-icon]  Build and install extension to device
-  test <ext-dir> <script> [args] Test a script on device
-  testall [ext...]               Run health check on multiple extensions`);
+  connect                                           Test connection to device
+  build <ext-dir> [out.zip]                         Build zip with bundled lib/ dependencies
+  install <ext-dir> [--no-icon]                     Build and install extension to device
+  test <ext-dir> <script> [args]                    Test a script on device
+  testall [ext...] [--query <kw>] [--json <file>]   Run comprehensive batch test across extensions`);
     return;
   }
 
@@ -265,14 +369,86 @@ Commands:
   }
 
   if (cmd === "testall") {
-    const extDirs = listAllExtDirs();
-    console.log(`Found ${extDirs.length} extension(s) in extensions/`);
-    if (extDirs.length === 0) return;
+    let query = "tien";
+    let timeoutMs = 45000;
+    let jsonOut = null;
+
+    const qi = args.indexOf("--query");
+    if (qi !== -1) { query = args[qi + 1]; args.splice(qi, 2); }
+    const ti = args.indexOf("--timeout");
+    if (ti !== -1) { timeoutMs = parseInt(args[ti + 1], 10); args.splice(ti, 2); }
+    const ji = args.indexOf("--json");
+    if (ji !== -1) { jsonOut = args[ji + 1]; args.splice(ji, 2); }
+
+    const explicitDirs = args.slice(1).map(d => resolveExtDir(d));
+    const dirs = explicitDirs.length > 0 ? explicitDirs : listAllExtDirs();
+
     const server = await resolveServer(explicitServer);
-    for (const d of extDirs) {
-      const rel = path.relative(repoRoot(), d);
-      console.log(`Testing ${rel}...`);
+    console.log(`[testall] Testing ${dirs.length} extension(s), query="${query}", timeout=${timeoutMs}ms`);
+    if (jsonOut) console.log(`[testall] Results will stream to ${jsonOut}\n`);
+
+    const results = [];
+    function flush() {
+      if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify(results, null, 2), "utf8");
     }
+
+    let consecutiveUnreach = 0;
+    for (let i = 0; i < dirs.length; i++) {
+      const extDir = dirs[i];
+      const relName = path.relative(repoRoot(), extDir);
+      let plugin = {}, meta = {}, scripts = {};
+      try {
+        plugin = JSON.parse(fs.readFileSync(path.join(extDir, "plugin.json"), "utf8"));
+        meta = plugin.metadata || {};
+        scripts = plugin.script || {};
+      } catch (e) {
+        results.push({ ext: relName, status: "BAD_PLUGIN", note: e.message });
+        console.log(`[${i + 1}/${dirs.length}] ${pad(relName)} BAD_PLUGIN   ${e.message}`);
+        flush();
+        continue;
+      }
+
+      const srcHost = hostOf(meta.source || "");
+      let script = scripts.search ? "search.js" : (scripts.home ? "home.js" : Object.values(scripts)[0]);
+      let vararg = scripts.search ? [query, "1"] : [];
+
+      let run = script ? await runScript(server, extDir, script, vararg, timeoutMs) : null;
+      let cls = classify(run, srcHost);
+
+      if (cls.status === "UNREACHABLE") {
+        consecutiveUnreach++;
+        await sleep(consecutiveUnreach > 2 ? 15000 : 5000);
+        const rp = await probeServer(server);
+        if (rp.ok) {
+          run = await runScript(server, extDir, script, vararg, timeoutMs);
+          cls = classify(run, srcHost);
+        }
+      }
+      if (cls.status !== "UNREACHABLE") consecutiveUnreach = 0;
+
+      const row = {
+        ext: relName,
+        type: meta.type || "",
+        source: meta.source || "",
+        script: script,
+        status: cls.status,
+        note: cls.note
+      };
+      results.push(row);
+      console.log(`[${i + 1}/${dirs.length}] ${pad(relName, 32)} ${pad(cls.status, 12)} ${cls.note || ""}`);
+      flush();
+    }
+
+    console.log("\n=== SUMMARY ===");
+    const byStatus = {};
+    results.forEach(r => {
+      byStatus[r.status] = byStatus[r.status] || [];
+      byStatus[r.status].push(r.ext);
+    });
+    Object.keys(byStatus).sort().forEach(s => {
+      console.log(`${pad(s, 12)} (${byStatus[s].length}): ${byStatus[s].join(", ")}`);
+    });
+    flush();
     return;
   }
 
@@ -285,5 +461,6 @@ if (require.main === module) {
 
 module.exports = {
   resolveExtDir,
-  listAllExtDirs
+  listAllExtDirs,
+  buildPayload
 };

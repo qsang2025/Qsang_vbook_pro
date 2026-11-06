@@ -9,7 +9,9 @@
     "build-catalog": "node scripts/cli.js build-catalog",
     "health-check": "node scripts/cli.js health-check",
     "connect": "node scripts/cli.js connect",
-    "test": "node scripts/cli.js test"
+    "test": "node scripts/cli.js test",
+    "testall": "node scripts/cli.js testall",
+    "install-ext": "node scripts/cli.js install"
   },
   "keywords": [
     "vbook",

@@ -1,0 +1,54 @@
+name: Yêu cầu thêm nguồn mới
+description: Đề xuất thêm một trang web truyện/sách/comic vào kho Qsang_vbook_pro
+title: "[New Source] "
+labels: ["new-source"]
+body:
+  - type: input
+    id: site-name
+    attributes:
+      label: Tên trang web / Nguồn
+      description: Tên nguồn truyện bạn muốn thêm (vd. App Truyện Chữ, Truyện Full...)
+      placeholder: App Truyện Chữ
+    validations:
+      required: true
+  - type: input
+    id: site-url
+    attributes:
+      label: Địa chỉ trang chính (URL)
+      description: Domain trang chủ chính thức
+      placeholder: https://apptruyenchu.pro
+    validations:
+      required: true
+  - type: dropdown
+    id: source-type
+    attributes:
+      label: Phân loại nội dung
+      options:
+        - novel (Truyện chữ tiếng Việt)
+        - chinese_novel (Truyện chữ tiếng Trung)
+        - comic (Truyện tranh)
+        - audio (Sách nói / Audio)
+        - video (Phim / Video)
+        - translate (Dịch thuật)
+        - tts (Text-to-Speech)
+        - ai (Hỗ trợ AI)
+    validations:
+      required: true
+  - type: dropdown
+    id: protection
+    attributes:
+      label: Rào cản bảo vệ / Cơ chế tải
+      options:
+        - "Web thông thường (SSR / HTML tĩnh)"
+        - "Next.js App Router (Streaming RSC / Server Action)"
+        - "Có Cloudflare Turnstile / Bot Challenge"
+        - "Cần đăng nhập tài khoản / VIP"
+        - "Không rõ"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Ghi chú thêm
+      description: Link truyện mẫu để test, danh sách domain dự phòng (mirror), lưu ý đặc biệt...
+      placeholder: Truyện mẫu: https://apptruyenchu.pro/truyen/...

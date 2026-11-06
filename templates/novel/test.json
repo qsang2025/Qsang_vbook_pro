@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "Check source alive & search",
+      "url": "https://site.com/search?keyword=tien",
+      "expectedPattern": "group"
+    },
+    {
+      "name": "Check detail metadata",
+      "url": "https://site.com/truyen/truyen-mau",
+      "expectedPattern": "Truyện Mẫu"
+    },
+    {
+      "name": "Check chapter content",
+      "url": "https://site.com/truyen/truyen-mau/chuong-1",
+      "expectedPattern": "Chương 1"
+    }
+  ]
+}

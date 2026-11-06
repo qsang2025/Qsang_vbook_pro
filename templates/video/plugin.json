@@ -5,7 +5,7 @@
     "version": 1,
     "source": "https://site.com",
     "description": "Extension description",
-    "locale": "vi",
+    "locale": "vi_VN",
     "regexp": "site\\.com/phim/[^/]+/?$",
     "type": "video",
     "nsfw": false,
