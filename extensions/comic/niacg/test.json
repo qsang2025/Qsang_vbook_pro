@@ -1,0 +1,29 @@
+{
+  "cases": [
+    {
+      "name": "Check category feed listing",
+      "url": "https://www.niacg.com/listinfo-15-0.html",
+      "expectedPattern": "list-col|thumb-overlay|video-title"
+    },
+    {
+      "name": "Check comic detail metadata",
+      "url": "https://www.niacg.com/showinfo-15-530-0.html",
+      "expectedPattern": "御姐的实战教学"
+    },
+    {
+      "name": "Check chapter reading page",
+      "url": "https://www.niacg.com/showinfo-17-20685-0.html",
+      "expectedPattern": "实战教学|current_series|episode"
+    },
+    {
+      "name": "Check doujinshi detail page",
+      "url": "https://www.niacg.com/moehome-3-156161.html",
+      "expectedPattern": "葵抄"
+    },
+    {
+      "name": "Check tag feed listing",
+      "url": "https://www.niacg.com/tags-巨乳-0.html",
+      "expectedPattern": "list-col|thumb-overlay"
+    }
+  ]
+}

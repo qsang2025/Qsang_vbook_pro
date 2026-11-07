@@ -25,6 +25,17 @@
       "description": "HHKUNGFU - Phim Hoạt Hình Kungfu Trung Quốc Vietsub / Thuyết Minh (Thương Nguyên Đồ, Đấu La Đại Lục, Tru Tiên...).",
       "type": "video",
       "locale": "vi_VN"
+    },
+    {
+      "name": "Niacg",
+      "author": "Qsang",
+      "path": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/comic/niacg/plugin.zip",
+      "version": 1,
+      "source": "https://www.niacg.com",
+      "icon": "https://raw.githubusercontent.com/qsang2025/Qsang_vbook_pro/main/extensions/comic/niacg/icon.png",
+      "description": "Đọc truyện tranh và cosplay trên Niacg",
+      "type": "comic",
+      "locale": "zh_CN"
     }
   ]
 }

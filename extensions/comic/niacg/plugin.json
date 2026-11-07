@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "name": "Niacg",
+    "author": "Qsang",
+    "version": 1,
+    "source": "https://www.niacg.com",
+    "regexp": "https?://(www\\.)?niacg\\.com/(showinfo|moehome|listinfo)-.+",
+    "description": "Đọc truyện tranh và cosplay trên Niacg",
+    "locale": "zh_CN",
+    "type": "comic",
+    "nsfw": true,
+    "encrypt": false
+  },
+  "script": {
+    "config": "config.js",
+    "home": "home.js",
+    "genre": "genre.js",
+    "search": "search.js",
+    "detail": "detail.js",
+    "toc": "toc.js",
+    "chap": "chap.js"
+  },
+  "config": {
+    "DOMAIN": {
+      "title": "Domain",
+      "default": "https://www.niacg.com",
+      "mode": "input",
+      "format": "text"
+    }
+  }
+}
